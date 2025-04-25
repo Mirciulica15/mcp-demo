@@ -1,0 +1,17 @@
+#!/bin/sh
+
+echo "Running Gitleaks on files in . ..."
+gitleaks dir --config gitleaks.toml
+
+GITLEAKS_RESULT=$?
+
+if [ $GITLEAKS_RESULT -ne 0 ]; then
+    echo "❌ Gitleaks found issues. Commit aborted."
+    exit 1
+fi
+
+echo "✅ Gitleaks passed."
+
+echo "✅ Proceeding with commit."
+
+exit 0
