@@ -64,7 +64,6 @@ class MCPClient:
                 "parameters": tool.inputSchema
             })
 
-        print("Sending query to LLM to decide which tool to use...")
         response = self.client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=messages,
@@ -90,7 +89,7 @@ class MCPClient:
         except json.JSONDecodeError:
             raise RuntimeError(f"Could not parse function_call.arguments: {raw_args!r}")
 
-        print(f"Calling function: {fn_name} with args: {fn_args}")
+        print(f"\nCalling function: {fn_name} with args: {fn_args}")
         tool_result = await self.session.call_tool(fn_name, fn_args)
 
         # 4) Inject the function call and its result back into the conversation
@@ -108,14 +107,13 @@ class MCPClient:
             "content": tool_result.content
         })
 
-        print("Final query to LLM to prepare response...")
         final_resp = self.client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=messages,
             max_tokens=150
         )
 
-        return final_resp.choices[0].message.content
+        return f"Answer: {final_resp.choices[0].message.content}"
 
     async def chat_loop(self):
         """Run an interactive chat loop"""
