@@ -373,6 +373,7 @@ dependencies = [
     { name = "azure-mgmt-resource" },
     { name = "mcp" },
     { name = "openai" },
+    { name = "proxmoxmanager" },
     { name = "python-dotenv" },
     { name = "requests" },
 ]
@@ -386,6 +387,7 @@ requires-dist = [
     { name = "azure-mgmt-resource", specifier = ">=23.3.0" },
     { name = "mcp", specifier = ">=1.6.0" },
     { name = "openai", specifier = ">=1.76.0" },
+    { name = "proxmoxmanager", specifier = ">=1.0.4" },
     { name = "python-dotenv", specifier = ">=1.1.0" },
     { name = "requests", specifier = ">=2.32.3" },
 ]
@@ -433,6 +435,28 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/84/51/817969ec969b73d8ddad085670ecd8a45ef1af1811d8c3b8a177ca4d1309/openai-1.76.0.tar.gz", hash = "sha256:fd2bfaf4608f48102d6b74f9e11c5ecaa058b60dad9c36e409c12477dfd91fb2", size = 434660, upload_time = "2025-04-23T16:33:53.266Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/59/aa/84e02ab500ca871eb8f62784426963a1c7c17a72fea3c7f268af4bbaafa5/openai-1.76.0-py3-none-any.whl", hash = "sha256:a712b50e78cf78e6d7b2a8f69c4978243517c2c36999756673e07a14ce37dc0a", size = 661201, upload_time = "2025-04-23T16:33:51.12Z" },
+]
+
+[[package]]
+name = "proxmoxer"
+version = "2.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/6a/54/dc2919eed681ca31220a9021e35935a3995335069b520279b4d55b9df822/proxmoxer-2.2.0.tar.gz", hash = "sha256:3ed63a58e5c0822841afdb3801f9d913a4996955c1c54f7319b5842ba2615006", size = 29666, upload_time = "2024-12-15T02:08:36.351Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2c/9a/0c3570e2ccce07d304c8a25f7238accc5174c234f5eddb3b666e20777898/proxmoxer-2.2.0-py3-none-any.whl", hash = "sha256:7e4431fd38e1a9321eedf6d860ddc373fc2b29ce1845fa8b072d7580d99f6b90", size = 19217, upload_time = "2024-12-15T02:08:34.047Z" },
+]
+
+[[package]]
+name = "proxmoxmanager"
+version = "1.0.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "proxmoxer" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e2/7b/1e9713e302b0df3221e458e5274f4b955b45b9d252cc6810e0df1841249a/proxmoxmanager-1.0.4.tar.gz", hash = "sha256:3d041539d4d230d700b4466c1ac9ca82eecd77c90a8a371f8f3c14ae9ed5137f", size = 16696, upload_time = "2021-10-17T20:48:32.612Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8a/f6/e99e1c8ad3eefd7ac644e1db310566309ac1fe5c289e3fbaa17e0627526c/proxmoxmanager-1.0.4-py3-none-any.whl", hash = "sha256:826b2aa41e1baae0e6ebb7be75d38616baacfaef241e7cad582b40f8e694b20f", size = 21468, upload_time = "2021-10-17T20:48:30.005Z" },
 ]
 
 [[package]]

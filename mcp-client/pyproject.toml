@@ -12,6 +12,7 @@ dependencies = [
     "azure-mgmt-resource>=23.3.0",
     "mcp>=1.6.0",
     "openai>=1.76.0",
+    "proxmoxmanager>=1.0.4",
     "python-dotenv>=1.1.0",
     "requests>=2.32.3",
 ]

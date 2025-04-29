@@ -110,7 +110,7 @@ class MCPClient:
         final_resp = self.client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=messages,
-            max_tokens=150
+            max_tokens=1000
         )
 
         return f"Answer: {final_resp.choices[0].message.content}"
