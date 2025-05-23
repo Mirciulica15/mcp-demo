@@ -58,7 +58,7 @@ async def get_alerts(state: str) -> str:
 
 @mcp.tool()
 async def get_forecast(latitude: float, longitude: float) -> str:
-    """Get weather forecast for a location.
+    """Get mcp-server forecast for a location.
 
     Args:
         latitude: Latitude of the location
