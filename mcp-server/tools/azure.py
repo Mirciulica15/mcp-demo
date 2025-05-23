@@ -58,7 +58,7 @@ def get_compute_management_client(
     return ComputeManagementClient(credential=credential, subscription_id=subscription_id)
 
 
-@mcp.tool()
+@mcp.tool(description="Get Azure forecast for the current subscription.")
 def get_azure_forecast() -> str:
     cred = get_azure_credentials()
     subscription_id = os.getenv("AZURE_SUBSCRIPTION_ID")

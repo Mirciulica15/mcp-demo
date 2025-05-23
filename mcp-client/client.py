@@ -1,13 +1,12 @@
 import asyncio
 import json
-import os
 from contextlib import AsyncExitStack
-from typing import Optional
+from typing import Optional, Union, Mapping, Any, List
 
 from dotenv import load_dotenv
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from openai import OpenAI
+from ollama import Client, ChatResponse, Message
 
 load_dotenv()
 
@@ -18,7 +17,7 @@ class MCPClient:
         self.stdio = None
         self.session: Optional[ClientSession] = None
         self.exit_stack = AsyncExitStack()
-        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.ollama_client = Client("http://localhost:11434")
 
     async def connect_to_server(self, server_script_path: str):
         """Connect to an MCP server
@@ -50,7 +49,7 @@ class MCPClient:
 
     async def process_query(self, query: str) -> str:
         """Process a query using the LLM and available MCP tools."""
-        messages = [
+        messages: List[Union[Mapping[str, Any], Message]] = [
             {"role": "user", "content": query}
         ]
 
@@ -64,56 +63,67 @@ class MCPClient:
                 "parameters": tool.inputSchema
             })
 
-        response = self.client.chat.completions.create(
-            model="gpt-3.5-turbo",
+        response: ChatResponse = self.ollama_client.chat(
+            model="llama3.2:3b",
             messages=messages,
-            max_tokens=1000,
-            functions=available_functions,
-            function_call="auto"
+            tools=available_functions
         )
 
-        msg = response.choices[0].message
+        msg: Message = response.message
 
         # 2) If the model returned plain text, just return it
         if msg.content:
             return msg.content
 
         # 3) Otherwise it requested a function call
-        if not msg.function_call:
+        if msg.tool_calls.count == 0:
             return ""
 
-        fn_name = msg.function_call.name
-        raw_args = msg.function_call.arguments
-        try:
-            fn_args = json.loads(raw_args)
-        except json.JSONDecodeError:
-            raise RuntimeError(f"Could not parse function_call.arguments: {raw_args!r}")
+        tool_call = msg.tool_calls[0]
+        fn_name = tool_call.function.name
+        raw_args = tool_call.function.arguments
+
+        if isinstance(raw_args, str):
+            try:
+                fn_args = json.loads(raw_args)
+            except json.JSONDecodeError:
+                raise RuntimeError(f"Could not parse function_call.arguments: {raw_args!r}")
+        elif isinstance(raw_args, dict):
+            fn_args = raw_args
+        else:
+            raise RuntimeError(f"Unexpected type for function_call.arguments: {type(raw_args)}")
 
         print(f"\nCalling function: {fn_name} with args: {fn_args}")
         tool_result = await self.session.call_tool(fn_name, fn_args)
 
+        print("Function result:", tool_result.content)
         # 4) Inject the function call and its result back into the conversation
+        if isinstance(tool_result.content, list):
+            func_output = "\n\n".join(tc.text for tc in tool_result.content)
+        else:
+            # fallback: if it's already a str
+            func_output = str(tool_result.content)
         messages.append({
             "role": "assistant",
-            "content": None,
             "function_call": {
                 "name": fn_name,
-                "arguments": raw_args
+                "arguments": json.dumps(fn_args)
             }
         })
+
+        # 5) Inject the function’s response as a proper function-message:
         messages.append({
             "role": "function",
             "name": fn_name,
-            "content": tool_result.content
+            "content": func_output  # THIS is a plain string
         })
 
-        final_resp = self.client.chat.completions.create(
-            model="gpt-3.5-turbo",
+        final_resp: ChatResponse = self.ollama_client.chat(
+            model="llama3.2:3b",
             messages=messages,
-            max_tokens=1000
         )
 
-        return f"Answer: {final_resp.choices[0].message.content}"
+        return f"Answer: {final_resp.message.content}"
 
     async def chat_loop(self):
         """Run an interactive chat loop"""
