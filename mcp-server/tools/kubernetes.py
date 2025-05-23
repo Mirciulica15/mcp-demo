@@ -1,23 +1,20 @@
 import asyncio
 import textwrap
 
+from kubernetes import client, config
+
 from mcp_server import mcp
 
 
 @mcp.tool()
-async def get_pods() -> str:
-    """Get all Pods across all namespaces via kubectl."""
-    proc = await asyncio.create_subprocess_exec(
-        "kubectl", "get", "pods", "--all-namespaces",
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    out, err = await proc.communicate()
-
-    if proc.returncode != 0:
-        return f"Error retrieving pods (code={proc.returncode}): {err.decode().strip()}"
-
-    return out.decode().strip()
+def get_pods_api() -> str:
+    config.load_kube_config()
+    v1 = client.CoreV1Api()
+    print("Listing pods with their IPs:")
+    ret = v1.list_pod_for_all_namespaces(watch=False)
+    for i in ret.items:
+        print("%s\t%s\t%s" % (i.status.pod_ip, i.metadata.namespace, i.metadata.name))
+    return ret.items
 
 
 @mcp.tool()
