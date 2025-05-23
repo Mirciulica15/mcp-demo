@@ -1,15 +1,18 @@
-import asyncio
-import textwrap
-
 from kubernetes import client, config
+from kubernetes.client import V1Pod, V1Service
 
 from mcp_server import mcp
 
 
+def get_client_api() -> client.CoreV1Api:
+    """Get Kubernetes API client."""
+    config.load_kube_config()
+    return client.CoreV1Api()
+
+
 @mcp.tool()
 def get_pods_api() -> str:
-    config.load_kube_config()
-    v1 = client.CoreV1Api()
+    v1 = get_client_api()
     print("Listing pods with their IPs:")
     ret = v1.list_pod_for_all_namespaces(watch=False)
     for i in ret.items:
@@ -18,80 +21,35 @@ def get_pods_api() -> str:
 
 
 @mcp.tool()
-async def create_demo_nginx() -> str:
+def create_demo_nginx() -> str:
     """Create a demo Nginx Deployment+Service and return the direct access URL."""
-    manifest_bytes = textwrap.dedent("""\
-    apiVersion: apps/v1
-    kind: Deployment
-    metadata:
-      name: nginx-demo
-    spec:
-      replicas: 1
-      selector:
-        matchLabels:
-          app: nginx-demo
-      template:
-        metadata:
-          labels:
-            app: nginx-demo
-        spec:
-          containers:
-          - name: nginx
-            image: docker.io/library/nginx:latest
-            imagePullPolicy: IfNotPresent
-            ports:
-            - containerPort: 80
-    ---
-    apiVersion: v1
-    kind: Service
-    metadata:
-      name: nginx-demo
-    spec:
-      selector:
-        app: nginx-demo
-      type: LoadBalancer
-      ports:
-      - port: 8888
-        targetPort: 80
-    """).encode("utf-8")
-
-    proc_apply = await asyncio.create_subprocess_exec(
-        "kubectl", "apply", "-f", "-",
-        stdin=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
+    v1 = get_client_api()
+    pod: V1Pod = V1Pod(
+        api_version="v1",
+        kind="Pod",
+        metadata={"name": "nginx-demo"},
+        spec={
+            "containers": [
+                {
+                    "name": "nginx",
+                    "image": "docker.io/library/nginx:latest",
+                    "imagePullPolicy": "IfNotPresent",
+                    "ports": [{"containerPort": 80}],
+                }
+            ]
+        },
     )
-    out_apply, err_apply = await proc_apply.communicate(manifest_bytes)
-    if proc_apply.returncode != 0:
-        return (
-            f"Error applying manifest:\n"
-            f"STDOUT: {out_apply.decode().strip()}\n"
-            f"STDERR: {err_apply.decode().strip()}"
-        )
-
-    proc_rollout = await asyncio.create_subprocess_exec(
-        "kubectl", "rollout", "status", "deployment/nginx-demo",
-        "--timeout=60s",
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
+    v1.create_namespaced_pod("default", pod)
+    service: V1Service = V1Service(
+        api_version="v1",
+        kind="Service",
+        metadata={"name": "nginx-demo"},
+        spec={
+            "type": "LoadBalancer",
+            "ports": [{"port": 80, "targetPort": 80}],
+            "selector": {"app": "nginx-demo"},
+        },
     )
-    out_rollout, err_rollout = await proc_rollout.communicate()
-    if proc_rollout.returncode != 0:
-        return (
-            f"Deployment rolled out with issues:\n"
-            f"STDOUT: {out_rollout.decode().strip()}\n"
-            f"STDERR: {err_rollout.decode().strip()}"
-        )
+    v1.create_namespaced_service("default", service)
 
-    proc_sp = await asyncio.create_subprocess_exec(
-        "kubectl", "get", "svc", "nginx-demo",
-        "-o", "jsonpath={.spec.ports[0].port}",
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    np_out, np_err = await proc_sp.communicate()
-    if proc_sp.returncode != 0:
-        return f"Deployed, but failed to get loadBalancer: {np_err.decode().strip()}"
-    load_balancer = np_out.decode().strip()
-
-    return f"Nginx demo is up! Access it at: http://localhost:{load_balancer}"
+    return f"Nginx demo is up!"
